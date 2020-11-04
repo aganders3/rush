@@ -15,10 +15,8 @@ fn main() {
 
         // split the command into serial tasks
         for command in user_input.split(";") {
-            // split the command into parallel tasks
-            // TODO: spawn these instead, and process the results in a separate
-            // thread
-            let mut results = Vec::new();
+            // split the command into parallel tasks, collect result
+            let mut children = Vec::new();
             for cmd in command.split("&") {
                 // split into command + args
                 let split_cmd: Vec<&str> = cmd.trim().split_whitespace().collect();
@@ -28,7 +26,7 @@ fn main() {
                         .args(&split_cmd[1..])
                         .spawn();
                     match result {
-                        Ok(child) => results.push(child),
+                        Ok(child) => children.push(child),
                         Err(error) => println!(
                             "Error running command {}: {}",
                             split_cmd[0],
@@ -38,7 +36,7 @@ fn main() {
                 }
             }
             // join all spawned (parallel) processes
-            for result in results.into_iter().map(|mut child| child.wait()) {
+            for result in children.into_iter().map(|mut child| child.wait()) {
                 match result {
                     Ok(status) => println!("Proc exited with {}", status),
                     Err(error) => println!("Error in proc {}", error),
