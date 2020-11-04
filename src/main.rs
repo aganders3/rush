@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::io::{self, Write};
+use std::process::Command;
 
 fn main() {
     loop {
@@ -18,26 +18,33 @@ fn main() {
             // split the command into parallel tasks
             // TODO: spawn these instead, and process the results in a separate
             // thread
+            let mut results = Vec::new();
             for cmd in command.split("&") {
                 // split into command + args
                 let split_cmd: Vec<&str> = cmd.trim().split_whitespace().collect();
                 // skip if there is no command...
                 if split_cmd.len() > 0 {
-                    let status = Command::new(split_cmd[0])
+                    let result = Command::new(split_cmd[0])
                         .args(&split_cmd[1..])
-                        .status();
-                    // let exit_status = runnable.status();
-                    match status {
-                        Ok(status) => print!("Exit code {:?}!", status.code()),
-                        Err(error) => print!("Error {}!", error),
+                        .spawn();
+                    match result {
+                        Ok(child) => results.push(child),
+                        Err(error) => println!(
+                            "Error running command {}: {}",
+                            split_cmd[0],
+                            error,
+                        ),
                     }
+                }
+            }
+            // join all spawned (parallel) processes
+            for result in results.into_iter().map(|mut child| child.wait()) {
+                match result {
+                    Ok(status) => println!("Proc exited with {}", status),
+                    Err(error) => println!("Error in proc {}", error),
                 }
             }
             print!("\n");
         }
     }
 }
-
-// fn run(&str command) -> Result<u8> {
-    // 
-// }
