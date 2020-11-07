@@ -1,5 +1,7 @@
+use std::env;
 use std::io::{self, Write};
-use std::process::Command;
+use std::path::Path;
+use std::process::{exit, Command};
 
 fn main() {
     loop {
@@ -22,16 +24,33 @@ fn main() {
                 let split_cmd: Vec<&str> = cmd.trim().split_whitespace().collect();
                 // skip if there is no command...
                 if split_cmd.len() > 0 {
-                    let result = Command::new(split_cmd[0])
-                        .args(&split_cmd[1..])
-                        .spawn();
-                    match result {
-                        Ok(child) => children.push(child),
-                        Err(error) => println!(
-                            "Error running command {}: {}",
-                            split_cmd[0],
-                            error,
-                        ),
+                    // check if it's a builtin command, and handle it
+                    if let Some(builtin) = Builtin::from_str(split_cmd[0]) {
+                        println!("Builtin: {:?}!", builtin);
+                        match builtin {
+                            Builtin::CD => {
+                                let new_pwd = Path::new(split_cmd[1]);
+                                if env::set_current_dir(new_pwd).is_ok() {
+                                    println!("Changed direcotry to {}", new_pwd.display());
+                                } else {
+                                    println!("Not a valid directory! CWD unchanged.");
+                                }
+                            }
+                            Builtin::Exit => exit(0),
+                        }
+                    // if it's not a builtin we just run it in a subproc
+                    } else {
+                        let result = Command::new(split_cmd[0])
+                            .args(&split_cmd[1..])
+                            .spawn();
+                        match result {
+                            Ok(child) => children.push(child),
+                            Err(error) => println!(
+                                "Error running command {}: {}",
+                                split_cmd[0],
+                                error,
+                            ),
+                        }
                     }
                 }
             }
@@ -43,6 +62,22 @@ fn main() {
                 }
             }
             print!("\n");
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Builtin {
+    CD,
+    Exit,
+}
+
+impl Builtin {
+    fn from_str(cmd: &str) -> Option<Builtin> {
+        match cmd {
+            "cd" => Some(Builtin::CD),
+            "exit" => Some(Builtin::Exit),
+            _ => None,
         }
     }
 }
