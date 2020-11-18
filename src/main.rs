@@ -1,8 +1,7 @@
-use std::env;
 use std::io::{self, Write};
-use std::path::Path;
-use std::process::{exit, Command};
-use std::str::FromStr;
+use std::process::Command;
+
+mod builtin;
 
 fn main() {
     loop {
@@ -26,7 +25,7 @@ fn main() {
                 // skip if there is no command...
                 if split_cmd.len() > 0 {
                     // check if it's a builtin command, and handle it
-                    if let Ok(builtin) = split_cmd[0].parse::<Builtin>() {
+                    if let Ok(builtin) = split_cmd[0].parse::<builtin::Builtin>() {
                         builtin.run(&split_cmd[1..]);
                     // if it's not a builtin we just run it in a subproc
                     } else {
@@ -52,40 +51,6 @@ fn main() {
                 }
             }
             print!("\n");
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Builtin {
-    CD,
-    Exit,
-}
-
-impl FromStr for Builtin {
-    type Err = String;
-    fn from_str(cmd: &str) -> Result<Builtin, Self::Err> {
-        match cmd {
-            "cd" => Ok(Builtin::CD),
-            "exit" => Ok(Builtin::Exit),
-            _ => Err(Self::Err::from("Not a builtin command")),
-        }
-    }
-}
-
-impl Builtin {
-    fn run(&self, args: &[&str]) {
-        println!("Builtin: {:?}!", self);
-        match self {
-            Builtin::CD => {
-                let new_pwd = Path::new(args[0]);
-                if env::set_current_dir(new_pwd).is_ok() {
-                    println!("Changed direcotry to {}", new_pwd.display());
-                } else {
-                    println!("Not a valid directory! CWD unchanged.");
-                }
-            }
-            Builtin::Exit => exit(0),
         }
     }
 }
